@@ -17,27 +17,28 @@ static const char *pat = "┌───┐\n"
 #define SZP 42
 
 /* Trits description in order from low to high values. */
-struct ds {
+struct ds
+{
     int pos, len, exp, val;
 } digit[SZD] = {
-    { 32, 3 },
-    { 26, 6 },
-    { 16, 8 },
-    { 0, 6 },
-    { 6, 3 },
-    { 9, 7 },
-    { 21, 5 },
-    { 35, 7 }
+    {32, 3},
+    {26, 6},
+    {16, 8},
+    {0, 6},
+    {6, 3},
+    {9, 7},
+    {21, 5},
+    {35, 7}
 };
 
 /* A number to convert and signed one to keep if it was negative. */
 static int src = 0, inv = 1;
 
 /* A buffer for the result. */
-static char res[SZP+1];
+static char res[SZP + 1];
 
 /* Use it like 'echo -42 | ./b3k' */
-int main (int q, char * argv[])
+int main(int q, char *argv[])
 {
     scanf("%d", &src);
 
@@ -46,54 +47,65 @@ int main (int q, char * argv[])
         src *= inv = -1;
 
     int r;
-    struct ds *p;
 
-    for (r = 0; r < SZD; ++r) {
-        p = &digit[r];
-        p->exp = r ? (3 * digit[r-1].exp) : 1;
-        p->val = 0;
+    digit[0].exp = 1;
+    digit[0].val = 0;
+    for (r = 1; r < SZD; ++r)
+    {
+        digit[r].exp = digit[r - 1].exp * 3;
+        digit[r].val = 0;
     }
 
     /* Truncate to the largest allowed positive. */
-    p = &digit[SZD - 1];
+    int t = 3 * digit[SZD - 1].exp / 2;
     r = 3 * p->exp / 2;
-    if (src > r)
-        src = r;
+    if (src > t)
+        src = t;
     else
-        r = src;
+        t = src;
 
     /* Like 'echo "obase=3; $src" | bc'. */
-    do {
-        while (r < p->exp)
-            --p;
-        r -= p->exp;
-        ++p->val;
-    } while (r);
+    do
+    {
+        for (r = SZD - 1; t < digit[r].exp;)
+        {
+            r--;
+        }
+        t -= digit[r].exp;
+        digit[r].val++;
+    } while (t != 0);
 
     /* Convert to the balanced form. */
-    while (p < &digit[SZD]) {
-        if (r)
-            ++p->val;
-        r = p->val > 1;
-        if (r)
-            p->val -= 3;
-        p->val *= inv;
-        ++p;
+    for (r = 0; r < SZD; r++)
+    {
+        if (t != 0)
+            digit[r].val++;
+
+        t = digit[r].val == 2;
+
+        if (t != 0)
+            digit[r].val = -1;
+
+        digit[r].val *= inv;
     }
 
     /* Restore the sign. */
     src *= inv;
 
     /* Show the result. */
-    for (p = &digit[0]; p < &digit[SZD]; ++p) {
-        r = p->pos;
-        if (p->val)
-            r += SZP;
-        if (p->val < 0)
-            r += SZP;
-        strncpy(res + p->pos,
-                pat + r,
-                p->len);
+    int pos;
+    for (r = 0; r < SZD; r++)
+    {
+        pos = digit[r].pos;
+        if (digit[r].val == -1)
+            pos = pos + 2 * SZP;
+
+        if (digit[r].val == 1)
+            pos = pos + SZP;
+
+        strncpy(res + digit[r].pos,
+                pat + pos,
+                digit[r].len);
     }
 
     printf("%s", res);
